@@ -1,5 +1,6 @@
 package com.benstopford.kafka.examples;
 
+import static java.util.Arrays.*;
 import static org.junit.Assert.*;
 import static org.hamcrest.core.Is.is;
 
@@ -13,6 +14,8 @@ import kafka.serializer.StringDecoder;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServerStartable;
 import org.apache.curator.test.TestingServer;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -21,10 +24,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 public class KafkaMostBasicTest {
 
@@ -33,6 +33,7 @@ public class KafkaMostBasicTest {
     private KafkaTestFixture server;
     private Producer producer;
     private ConsumerConnector consumerConnector;
+    KafkaConsumer<String, String> consumer;
 
     @Before
     public void setup() throws Exception {
@@ -43,21 +44,24 @@ public class KafkaMostBasicTest {
     @After
     public void teardown() throws Exception {
         producer.close();
-        consumerConnector.shutdown();
+        if (consumerConnector != null)
+            consumerConnector.shutdown();
+        if (consumer != null)
+            consumer.close();
         server.stop();
     }
 
     @Test
-    public void shouldWriteThenRead() throws Exception {
+    public void shouldWriteThenReadOldConsumer() throws Exception {
 
         //Create a consumer
-        ConsumerIterator<String, String> it = buildConsumer(KafkaMostBasicTest.topic);
+        ConsumerIterator<String, String> it = buildOldConsumer(topic);
 
         //Create a producer
         producer = new KafkaProducer(producerProps());
 
         //send a message
-        producer.send(new ProducerRecord(KafkaMostBasicTest.topic, "message")).get();
+        producer.send(new ProducerRecord(topic, "message")).get();
 
         //read it back
         MessageAndMetadata<String, String> messageAndMetadata = it.next();
@@ -65,8 +69,28 @@ public class KafkaMostBasicTest {
         assertThat(value, is("message"));
     }
 
-    private ConsumerIterator<String, String> buildConsumer(String topic) {
-        Properties props = consumerProperties();
+    @Test
+    public void shouldWriteThenReadNewConsumer() throws Exception {
+
+        //Create a consumer
+        consumer = new KafkaConsumer(newConsumerProperties());
+        consumer.subscribe(asList(topic));
+        consumer.poll(1);//initialise consumption to earliest message
+
+        //Create a producer
+        producer = new KafkaProducer(producerProps());
+
+        //send a message
+        producer.send(new ProducerRecord(topic, "message")).get();
+
+        //read it back
+        ConsumerRecord<String, String> msg = consumer.poll(1000).iterator().next();
+        assertThat(msg.value(), is("message"));
+    }
+
+
+    private ConsumerIterator<String, String> buildOldConsumer(String topic) {
+        Properties props = oldConsumerProperties();
 
         Map<String, Integer> topicCountMap = new HashMap();
         topicCountMap.put(topic, 1);
@@ -77,11 +101,21 @@ public class KafkaMostBasicTest {
         return stream.iterator();
     }
 
-    private Properties consumerProperties() {
+    private Properties oldConsumerProperties() {
         Properties props = new Properties();
         props.put("zookeeper.connect", serverProperties().get("zookeeper.connect"));
         props.put("group.id", "group1");
         props.put("auto.offset.reset", "smallest");
+        return props;
+    }
+
+    private Properties newConsumerProperties() {
+        Properties props = new Properties();
+        props.put("group.id", "group1");
+        props.put("bootstrap.servers", "localhost:9092");
+        props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        props.put("auto.offset.reset", "earliest");
         return props;
     }
 
