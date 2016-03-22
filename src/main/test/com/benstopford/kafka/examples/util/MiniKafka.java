@@ -7,7 +7,7 @@ import org.apache.curator.test.TestingServer;
 import java.io.IOException;
 import java.util.Properties;
 
-public class KafkaTestFixture {
+public class MiniKafka {
     private TestingServer zk;
     private KafkaServerStartable kafka;
 

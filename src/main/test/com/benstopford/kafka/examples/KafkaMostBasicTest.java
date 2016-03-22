@@ -1,10 +1,6 @@
 package com.benstopford.kafka.examples;
 
-import static java.util.Arrays.*;
-import static org.junit.Assert.*;
-import static org.hamcrest.core.Is.is;
-
-import com.benstopford.kafka.examples.util.KafkaTestFixture;
+import com.benstopford.kafka.examples.util.MiniKafka;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.ConsumerIterator;
@@ -12,9 +8,6 @@ import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.message.MessageAndMetadata;
 import kafka.serializer.StringDecoder;
-import kafka.server.KafkaConfig;
-import kafka.server.KafkaServerStartable;
-import org.apache.curator.test.TestingServer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -24,21 +17,27 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+
+import static java.util.Arrays.asList;
+import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertThat;
 
 public class KafkaMostBasicTest {
 
     public static final String topic = "topic1-" + System.currentTimeMillis();
 
-    private KafkaTestFixture server;
+    private MiniKafka server;
     private Producer producer;
     private ConsumerConnector consumerConnector;
     KafkaConsumer<String, String> consumer;
 
     @Before
     public void setup() throws Exception {
-        server = new KafkaTestFixture();
+        server = new MiniKafka();
         server.start(serverProperties());
     }
 
