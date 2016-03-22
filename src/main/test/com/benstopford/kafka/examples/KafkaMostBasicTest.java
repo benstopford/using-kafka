@@ -4,6 +4,7 @@ import static java.util.Arrays.*;
 import static org.junit.Assert.*;
 import static org.hamcrest.core.Is.is;
 
+import com.benstopford.kafka.examples.util.KafkaTestFixture;
 import kafka.consumer.Consumer;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.ConsumerIterator;
@@ -44,10 +45,9 @@ public class KafkaMostBasicTest {
     @After
     public void teardown() throws Exception {
         producer.close();
-        if (consumerConnector != null)
-            consumerConnector.shutdown();
-        if (consumer != null)
+        if (consumer != null) {
             consumer.close();
+        }
         server.stop();
     }
 
@@ -71,7 +71,6 @@ public class KafkaMostBasicTest {
 
     @Test
     public void shouldWriteThenReadNewConsumer() throws Exception {
-
         //Create a consumer
         consumer = new KafkaConsumer(newConsumerProperties());
         consumer.subscribe(asList(topic));
@@ -111,7 +110,7 @@ public class KafkaMostBasicTest {
 
     private Properties newConsumerProperties() {
         Properties props = new Properties();
-        props.put("group.id", "group1");
+        props.put("group.id", "group1" + System.nanoTime());
         props.put("bootstrap.servers", "localhost:9092");
         props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
@@ -134,34 +133,6 @@ public class KafkaMostBasicTest {
         props.put("broker.id", "1");
         return props;
     }
-
-    private static class KafkaTestFixture {
-        private TestingServer zk;
-        private KafkaServerStartable kafka;
-
-        public void start(Properties properties) throws Exception {
-            Integer port = getZkPort(properties);
-            zk = new TestingServer(port);
-            zk.start();
-
-            KafkaConfig kafkaConfig = new KafkaConfig(properties);
-            kafka = new KafkaServerStartable(kafkaConfig);
-            kafka.startup();
-        }
-
-        public void stop() throws IOException {
-            kafka.shutdown();
-            zk.stop();
-            zk.close();
-        }
-
-        private int getZkPort(Properties properties) {
-            String url = (String) properties.get("zookeeper.connect");
-            String port = url.split(":")[1];
-            return Integer.valueOf(port);
-        }
-    }
-
 }
     
 
