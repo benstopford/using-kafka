@@ -129,7 +129,7 @@ public class KafkaMostBasicTest {
     private Properties serverProperties() {
         Properties props = new Properties();
         props.put("zookeeper.connect", "localhost:2181");
-        props.put("broker.id", "1");
+        props.put("broker.id", "1");//not necessary
         return props;
     }
 }
